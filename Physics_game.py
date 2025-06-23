@@ -12,8 +12,8 @@ import pymunk
 import random
 
 # Constants
-SCREEN_WIDTH, SCREEN_HEIGHT = 1000, 600
-SCREEN_TITLE = "Physics test"
+SCREEN_WIDTH, SCREEN_HEIGHT = 1200, 720
+SCREEN_TITLE = "Physics Simulation"
 
 
 class MainView(arcade.View):
@@ -89,22 +89,27 @@ class MainView(arcade.View):
 class EnvironmentView(arcade.View):
     """Environment View for the physics simulation"""
     
+    sidebar_width = 300
+    w = arcade.View.width
+    h = arcade.View.height
+
     def __init__(self):
         super().__init__()
         arcade.set_background_color(arcade.color.BLACK)
         
-        # Get the actual window size
-        width, height = self.window.get_size()
-        
         # Create physics engine with stronger gravity
         self.physics_engine = PymunkPhysicsEngine(gravity=(0, -900))
         
+        # Create sidebar for controls
+        
+        widget_area = self.w - self.sidebar_width
+
         # Create box walls as static sprites
         self.wall_list = arcade.SpriteList()
 
         # Floor
-        floor = arcade.SpriteSolidColor(width=width, height=20, color=arcade.color.WHITE)
-        floor.position = width // 2, 10
+        floor = arcade.SpriteSolidColor(width=widget_area, height=20, color=arcade.color.WHITE)
+        floor.position = widget_area // 2, 10
         self.wall_list.append(floor)
         self.physics_engine.add_sprite(
             floor,
@@ -114,8 +119,8 @@ class EnvironmentView(arcade.View):
         )
 
         # Ceiling
-        ceiling = arcade.SpriteSolidColor(width=width, height=20, color=arcade.color.WHITE)
-        ceiling.position = width // 2, height - 10
+        ceiling = arcade.SpriteSolidColor(width=widget_area, height=20, color=arcade.color.WHITE)
+        ceiling.position = widget_area // 2, self.h - 10
         self.wall_list.append(ceiling)
         self.physics_engine.add_sprite(
             ceiling,
@@ -125,8 +130,8 @@ class EnvironmentView(arcade.View):
         )
 
         # Left wall
-        left_wall = arcade.SpriteSolidColor(width=20, height=height, color=arcade.color.WHITE)
-        left_wall.position = 10, height // 2
+        left_wall = arcade.SpriteSolidColor(width=20, height=self.h, color=arcade.color.WHITE)
+        left_wall.position = 10, self.h // 2
         self.wall_list.append(left_wall)
         self.physics_engine.add_sprite(
             left_wall,
@@ -136,8 +141,8 @@ class EnvironmentView(arcade.View):
         )
 
         # Right wall
-        right_wall = arcade.SpriteSolidColor(width=20, height=height, color=arcade.color.WHITE)
-        right_wall.position = width - 10, height // 2
+        right_wall = arcade.SpriteSolidColor(width=20, height=self.h, color=arcade.color.WHITE)
+        right_wall.position = widget_area, self.h // 2
         self.wall_list.append(right_wall)
         self.physics_engine.add_sprite(
             right_wall,
@@ -153,16 +158,26 @@ class EnvironmentView(arcade.View):
         self.ui = UIManager()
         self.ui.enable()
         
+        self.sidebar_layout = UIBoxLayout(vertical=True, width=self.sidebar_width, height=self.h, space_between=20)
+
+        self.sidebar = UITextArea(
+            text="Sidebar Widget", width=self.sidebar_width - 20, height=100, font_size=18,
+            text_color=arcade.color.WHITE, x= self.w - self.sidebar_width + 10, y=self.h // 2
+        )
         # Back button
         back_button = UIFlatButton(text="Back to Menu", width=200)
         back_button.on_click = self.on_back_click
         
-        self.anchor = self.ui.add(UIAnchorLayout())
+        self.sidebar_layout.add(self.sidebar)
+        self.sidebar_layout.add(back_button)
+        # Anchor layout for sidebar
+        self.anchor = UIAnchorLayout()
+        
         self.anchor.add(
-            anchor_x="left",
-            anchor_y="bottom",
-            child=back_button
+            anchor_x="right", anchor_y="top", child=self.sidebar_layout
         )
+
+        self.ui.add(self.anchor)
         
         # Schedule ball spawning
         arcade.schedule(self.spawn_ball, 1.0)  # Spawn a ball every second
@@ -187,8 +202,8 @@ class EnvironmentView(arcade.View):
         ball = BallObject(radius, color)
         
         # Position at random x at top of screen
-        x = random.randint(radius, SCREEN_WIDTH - radius)
-        y = 600 - radius
+        x = random.randint(radius, self.w - radius)
+        y = self.h - 100
         ball.position = (x, y)
         
         # Add to physics engine
@@ -213,7 +228,6 @@ class EnvironmentView(arcade.View):
         # Draw all objects
         self.wall_list.draw()
         self.ball_list.draw()
-        
         self.ui.draw()
     
     def on_hide_view(self):
