@@ -86,7 +86,6 @@ class MainView(arcade.View):
         # Disable UI when hiding view
         self.ui.disable()
 
-
 class EnvironmentView(arcade.View):
     """Environment View for the physics simulation"""
     
