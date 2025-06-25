@@ -17,7 +17,7 @@ SCREEN_TITLE = "Physics Simulation"
 
 
 class MainView(arcade.View):
-    #Main View
+    # Creates the main view 
     
     def __init__(self):
         super().__init__()
@@ -74,7 +74,7 @@ class MainView(arcade.View):
         )
     
     def on_environment_click(self, event):
-        """Switch to environment view"""
+        # Switch to environment view
         env_view = EnvironmentView()
         self.window.show_view(env_view)
     
@@ -97,17 +97,14 @@ class EnvironmentView(arcade.View):
         super().__init__()
         arcade.set_background_color(arcade.color.BLACK)
         
-        # Create physics engine with stronger gravity
+        # Create physics engine with gravity
         self.physics_engine = PymunkPhysicsEngine(gravity=(0, -900))
-        
-        # Create sidebar for controls
         
         widget_area = self.w - self.sidebar_width
 
-        # Create box walls as static sprites
+        # Creates the walls for the balls to spawn in
         self.wall_list = arcade.SpriteList()
 
-        # Floor
         floor = arcade.SpriteSolidColor(width=widget_area, height=20, color=arcade.color.WHITE)
         floor.position = widget_area // 2, 10
         self.wall_list.append(floor)
@@ -118,7 +115,6 @@ class EnvironmentView(arcade.View):
             elasticity=0.99,
         )
 
-        # Ceiling
         ceiling = arcade.SpriteSolidColor(width=widget_area, height=20, color=arcade.color.WHITE)
         ceiling.position = widget_area // 2, self.h - 10
         self.wall_list.append(ceiling)
@@ -129,7 +125,6 @@ class EnvironmentView(arcade.View):
             elasticity=0.99,
         )
 
-        # Left wall
         left_wall = arcade.SpriteSolidColor(width=20, height=self.h, color=arcade.color.WHITE)
         left_wall.position = 10, self.h // 2
         self.wall_list.append(left_wall)
@@ -140,7 +135,6 @@ class EnvironmentView(arcade.View):
             elasticity=0.99,
         )
 
-        # Right wall
         right_wall = arcade.SpriteSolidColor(width=20, height=self.h, color=arcade.color.WHITE)
         right_wall.position = widget_area, self.h // 2
         self.wall_list.append(right_wall)
@@ -151,25 +145,52 @@ class EnvironmentView(arcade.View):
             elasticity=0.99,
         )
         
-        # List to keep track of balls
+        # List for the ball objects
         self.ball_list = arcade.SpriteList()
         
-        # UI for back button
+        # Enable the UI manager
         self.ui = UIManager()
         self.ui.enable()
         
         self.sidebar_layout = UIBoxLayout(vertical=True, width=self.sidebar_width, height=self.h, space_between=20)
 
         self.sidebar = UITextArea(
-            text="Sidebar Widget", width=self.sidebar_width - 20, height=100, font_size=18,
+            text="Change Object's properties", width=self.sidebar_width - 20, height=100, font_size=18,
             text_color=arcade.color.WHITE, x= self.w - self.sidebar_width + 10, y=self.h // 2
         )
+
+        self.radius_slider = UISlider(value=30, min_value=15, max_value=60, width=self.sidebar_width - 40)
+        self.elasticity_slider = UISlider(value=0.99, min_value=0.5, max_value=1.0, width=self.sidebar_width - 40)
+
+        self.radius_label = UILabel(text=f"Ball Radius: {self.radius_slider.value:.0f}", width=self.sidebar_width - 40)
+        self.elasticity_label = UILabel(text=f"Elasticity: {self.elasticity_slider.value:.2f}", width=self.sidebar_width - 40)
+
+        def on_radius_change(event):
+            self.radius_label.text = f"Ball Radius: {self.radius_slider.value:.0f}"
+
+        def on_elasticity_change(event):
+            self.elasticity_label.text = f"Elasticity: {self.elasticity_slider.value:.2f}"
+
+        self.radius_slider.on_change = on_radius_change
+        self.elasticity_slider.on_change = on_elasticity_change
+
         # Back button
         back_button = UIFlatButton(text="Back to Menu", width=200)
         back_button.on_click = self.on_back_click
-        
+
+        # Button to spawn balls
+        spawn_button = UIFlatButton(text="Spawn Ball", width=200)
+        spawn_button.on_click = self.on_spawn_ball_click
+
         self.sidebar_layout.add(self.sidebar)
         self.sidebar_layout.add(back_button)
+        self.sidebar_layout.add(spawn_button)
+        self.sidebar_layout.add(self.radius_label)
+        self.sidebar_layout.add(self.radius_slider)
+        self.sidebar_layout.add(self.elasticity_label)
+        self.sidebar_layout.add(self.elasticity_slider)
+        
+
         # Anchor layout for sidebar
         self.anchor = UIAnchorLayout()
         
@@ -178,19 +199,20 @@ class EnvironmentView(arcade.View):
         )
 
         self.ui.add(self.anchor)
-        
-        # Schedule ball spawning
-        arcade.schedule(self.spawn_ball, 1.0)  # Spawn a ball every second
 
+    def on_spawn_ball_click(self, event):
+        """Spawn a ball immediately when the button is pressed."""
+        self.spawn_ball(0)
     
     def spawn_ball(self, delta_time):
 
-        MAX_BALLS = 10
+        MAX_BALLS = 20
         if len(self.ball_list) >= MAX_BALLS:
-            return
+            oldest_ball = self.ball_list.pop(0)
+            self.physics_engine.remove_sprite(oldest_ball)
         
-        """Spawn a new ball at a random position at the top of the screen"""
-        radius = random.randint(15, 40)
+        radius = int(self.radius_slider.value)
+        elasticity = float(self.elasticity_slider.value)
         color = random.choice([
             arcade.color.RED, 
             arcade.color.BLUE, 
@@ -200,9 +222,10 @@ class EnvironmentView(arcade.View):
         ])
         
         ball = BallObject(radius, color)
+        ball.elasticity = elasticity
         
         # Position at random x at top of screen
-        x = random.randint(radius, self.w - radius)
+        x = random.randint(radius, (self.w - self.sidebar_width) - radius)
         y = self.h - 100
         ball.position = (x, y)
         
@@ -234,7 +257,7 @@ class EnvironmentView(arcade.View):
         """Disable UI when hiding view"""
         arcade.unschedule(self.spawn_ball)
         self.ui.disable()
-
+    
         
 class BallObject(arcade.SpriteCircle):
     """Ball object for the physics simulation"""
