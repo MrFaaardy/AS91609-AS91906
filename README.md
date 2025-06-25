@@ -22,6 +22,7 @@ When you get the program to run successfully you will see the main menu (Not aes
 There are 3 buttons but only Gravity is the only working one because I ran out of time in making the other Environments.
 
 Click "Gravity"
+
 <img src="./images/Menu.png" alt="Menu" width="600">
 
 Then it will switch the view to the Gravity Physics Simulation.
